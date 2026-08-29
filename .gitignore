@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.*
+.env.local
+.env.*.local
+.DS_Store
+api/__pycache__/
+api/cache/
+api/venv/
+.vercel/
