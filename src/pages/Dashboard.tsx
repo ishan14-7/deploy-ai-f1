@@ -6,7 +6,6 @@ import type { LapRequestParams } from '../services/telemetryService';
 import type { TelemetryData } from '../types/telemetry';
 import { TelemetryChart } from '../components/TelemetryChart';
 import { TrackMap } from '../components/TrackMap';
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { EnergyStrategyChart } from '../components/EnergyStrategyChart';
 import { StrategyMetrics } from '../components/StrategyMetrics';
 import { EngineerReport } from '../components/EngineerReport';
