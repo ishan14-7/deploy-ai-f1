@@ -1,17 +1,15 @@
 import React, { useCallback, useMemo } from 'react';
 import {
   ReactFlow,
-  MiniMap,
   Controls,
   Background,
   useNodesState,
   useEdgesState,
   addEdge,
-  Connection,
-  Edge,
   Handle,
   Position
 } from '@xyflow/react';
+import type { Connection, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Activity, Database, Cpu, Brain, BatteryCharging, Flag, GitCommit, ChevronRight } from 'lucide-react';
 
