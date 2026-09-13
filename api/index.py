@@ -5,7 +5,7 @@ from typing import Optional
 from pathlib import Path
 import math
 
-from data.fastf1_loader import load_session_telemetry
+from data.openf1_loader import load_session_telemetry
 from data.telemetry_processor import process_telemetry, create_mock_telemetry
 from data.segmenter import segment_telemetry
 
@@ -29,6 +29,9 @@ def get_lap_telemetry(year: int, event: str, session: str, driver: str, lap_numb
         raw_telemetry, lap_info = load_session_telemetry(year, event, session, driver, lap_number)
         telemetry = process_telemetry(raw_telemetry)
         segments = segment_telemetry(telemetry)
+        if telemetry:
+            lap_info['lapDistance'] = telemetry[-1]['distance']
+
         
         # Replace NaNs or Infs that JSON can't handle
         def clean_float(val):
@@ -64,6 +67,9 @@ def get_sample_telemetry():
     try:
         telemetry, lap_info = create_mock_telemetry()
         segments = segment_telemetry(telemetry)
+        if telemetry:
+            lap_info['lapDistance'] = telemetry[-1]['distance']
+
         return {
             "metadata": lap_info,
             "telemetry": telemetry,

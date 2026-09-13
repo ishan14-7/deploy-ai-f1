@@ -1,82 +1,69 @@
-import pandas as pd
-import numpy as np
+from datetime import datetime
 
-def process_telemetry(raw_telemetry: pd.DataFrame):
-    """
-    Cleans and normalizes FastF1 telemetry.
-    """
-    # Select necessary columns and handle missing values
-    columns_to_keep = ['Distance', 'Time', 'Speed', 'Throttle', 'Brake', 'RPM', 'nGear', 'X', 'Y']
-    available_columns = [col for col in columns_to_keep if col in raw_telemetry.columns]
+def process_telemetry(raw_telemetry: dict):
+    car_data = raw_telemetry.get('car_data', [])
+    loc_data = raw_telemetry.get('location', [])
     
-    df = raw_telemetry[available_columns].copy()
+    if not car_data:
+        return []
+
+    car_data.sort(key=lambda x: x['date'])
+    if loc_data:
+        loc_data.sort(key=lambda x: x['date'])
+
+    merged_data = []
+    total_distance = 0.0
     
-    # Convert Time (timedelta) to seconds
-    if 'Time' in df.columns:
-        df['Time'] = df['Time'].dt.total_seconds()
+    try:
+        start_time = datetime.fromisoformat(car_data[0]['date'].replace('Z', '+00:00'))
+    except Exception:
+        return []
+
+    loc_idx = 0
+    num_locs = len(loc_data)
+
+    for i in range(len(car_data)):
+        cd = car_data[i]
+        try:
+            current_time = datetime.fromisoformat(cd['date'].replace('Z', '+00:00'))
+        except Exception:
+            continue
+            
+        time_sec = (current_time - start_time).total_seconds()
+        speed = float(cd.get('speed', 0) or 0)
         
-    # Replace any NaNs with 0 (or previous value)
-    df.fillna(method='ffill', inplace=True)
-    df.fillna(0, inplace=True)
-    
-    # Rename nGear to gear
-    if 'nGear' in df.columns:
-        df.rename(columns={'nGear': 'gear'}, inplace=True)
-    
-    # Rename columns to lowercase for JSON contract
-    df.rename(columns=lambda x: x.lower(), inplace=True)
-    
-    return df.to_dict('records')
+        if i > 0:
+            try:
+                prev_time = datetime.fromisoformat(car_data[i-1]['date'].replace('Z', '+00:00'))
+                dt = (current_time - prev_time).total_seconds()
+                total_distance += (speed / 3.6) * dt
+            except Exception:
+                pass
+
+        x, y = 0.0, 0.0
+        while loc_idx < num_locs - 1:
+            loc_time = datetime.fromisoformat(loc_data[loc_idx]['date'].replace('Z', '+00:00'))
+            if loc_time >= current_time:
+                break
+            loc_idx += 1
+            
+        if loc_idx < num_locs:
+            x = float(loc_data[loc_idx].get('x', 0) or 0)
+            y = float(loc_data[loc_idx].get('y', 0) or 0)
+
+        merged_data.append({
+            "distance": total_distance,
+            "time": time_sec,
+            "speed": speed,
+            "throttle": float(cd.get('throttle', 0) or 0),
+            "brake": 1 if float(cd.get('brake', 0) or 0) > 0 else 0,
+            "rpm": float(cd.get('rpm', 0) or 0),
+            "gear": float(cd.get('n_gear', 0) or 0),
+            "x": x,
+            "y": y
+        })
+
+    return merged_data
 
 def create_mock_telemetry():
-    """
-    Creates a sample/fallback telemetry dataset for local development.
-    Simulates a basic track with straights and corners.
-    """
-    lap_info = {
-        "year": 2024,
-        "event": "Mock Grand Prix",
-        "session": "Q",
-        "driver": "MOC",
-        "lapTime": 90.0,
-        "lapDistance": 5000.0,
-        "lapNumber": 14,
-        "availableLaps": [
-            {"lapNumber": 13, "lapTime": None, "isFastest": False},
-            {"lapNumber": 14, "lapTime": 90.0, "isFastest": True},
-            {"lapNumber": 15, "lapTime": 95.0, "isFastest": False}
-        ]
-    }
-    
-    num_points = 1000
-    distances = np.linspace(0, 5000, num_points)
-    times = np.linspace(0, 90, num_points)
-    
-    # Simulate speed (sine wave for corners and straights)
-    speeds = 150 + 100 * np.sin(distances / 5000 * 4 * np.pi)
-    
-    # Simulate throttle (high when speed is increasing)
-    throttle = np.where(np.gradient(speeds) > 0, 100, 0)
-    
-    # Simulate brake (true when speed is decreasing sharply)
-    brake = np.gradient(speeds) < -0.5
-    
-    # Simulate track coordinates (a simple loop)
-    x = 1000 * np.cos(distances / 5000 * 2 * np.pi)
-    y = 1000 * np.sin(distances / 5000 * 2 * np.pi)
-    
-    data = []
-    for i in range(num_points):
-        data.append({
-            "distance": float(distances[i]),
-            "time": float(times[i]),
-            "speed": float(speeds[i]),
-            "throttle": float(throttle[i]),
-            "brake": bool(brake[i]),
-            "rpm": int(10000 + 2000 * (speeds[i] / 300)),
-            "gear": int(min(8, max(1, speeds[i] / 40))),
-            "x": float(x[i]),
-            "y": float(y[i])
-        })
-        
-    return data, lap_info
+    pass
