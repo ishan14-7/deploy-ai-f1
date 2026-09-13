@@ -4,10 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from pathlib import Path
 import math
+import sys
+import os
+
+# Add the current directory to sys.path so Vercel can find the 'data' module
+sys.path.append(os.path.dirname(__file__))
 
 from data.openf1_loader import load_session_telemetry
 from data.telemetry_processor import process_telemetry, create_mock_telemetry
 from data.segmenter import segment_telemetry
+
 
 app = FastAPI(title="DeployAI Telemetry API")
 
@@ -15,7 +21,7 @@ app = FastAPI(title="DeployAI Telemetry API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
