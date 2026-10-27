@@ -1,32 +1,47 @@
-# React + TypeScript + Vite
+# Deploy AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+An F1 session explorer. Pick a season, Grand Prix, session and driver, and Deploy AI loads that lap's real telemetry, draws it on the circuit map, and shows how a smarter battery deployment strategy compares with a naive one.
 
-Currently, two official plugins are available:
+**Live:** [deploy-ai-f1.vercel.app](https://deploy-ai-f1.vercel.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What it does
 
-## React Compiler
+- **Real telemetry.** Speed, throttle, brake, gear, RPM and car position for any lap, pulled from the [OpenF1 API](https://openf1.org).
+- **Track map.** The lap is drawn on the circuit from the car's position data, split into straights, corners, braking and acceleration zones.
+- **Energy strategy.** Compares a naive "deploy on full throttle" approach with an optimised deploy, hold and harvest plan, and flags where the naive one runs the battery flat.
+- **Engineer report.** A race-engineer style summary of the lap and the strategy difference.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The strategy model is simulated in the browser for now (`src/data/mockStrategy.ts`). `src/config/dataSource.ts` has a switch to point it at a real strategy API instead.
 
-## Expanding the Oxlint configuration
+## Stack
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+| Part | Tech |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, shadcn/ui, Recharts |
+| API | Python, FastAPI (`api/index.py`) |
+| Data | OpenF1 API, with a generated sample lap as a fallback |
+| Hosting | Vercel (static frontend plus a Python serverless function) |
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Running locally
+
+You need Node.js and Python 3.
+
+```bash
+# API on http://localhost:8000
+cd api
+pip install -r requirements.txt
+uvicorn index:app --reload --port 8000
+
+# Frontend on http://localhost:5173 (in a second terminal)
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+In development the frontend calls the API on port 8000. In production both are served from the same Vercel domain, and `vercel.json` routes `/api/*` to the Python function.
+
+## API
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/lap?year=&event=&session=&driver=&lap_number=` | Telemetry, track segments and lap metadata. `lap_number` is optional and defaults to the fastest lap. |
+| `GET /api/lap/sample` | A generated sample lap, for when live data can't be loaded. |
